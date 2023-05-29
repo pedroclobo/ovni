@@ -88,7 +88,6 @@ function createScene() {
 	scene = new THREE.Scene();
 	scene.background = new THREE.Color("rgb(230, 230, 230)");
 
-	createTrailer(-45, 12, 0);
     createOvni(0, 40, 0);
 }
 
