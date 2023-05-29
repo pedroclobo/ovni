@@ -82,6 +82,38 @@ function createOvni(x, y, z) {
     scene.add(ovni);
 }
 
+function rotateOvni() {
+    "use strict";
+
+    ovni.rotation.y += Math.PI / 180;
+}
+
+function moveOvniX(left) {
+    "use strict";
+    var velocity = new THREE.Vector3(35, 0, 0).multiplyScalar(delta);
+
+    if (left) {
+        velocity.x = -velocity.x;
+    } else {
+        velocity.x = velocity.x;
+    }
+
+    ovni.position.add(velocity);
+}
+
+function moveOvniZ(left) {
+    "use strict";
+    var velocity = new THREE.Vector3(0, 0, 35).multiplyScalar(delta);
+    
+    if (left) {
+        velocity.z = -velocity.z;
+    } else {
+        velocity.z = velocity.z;
+    }
+
+    ovni.position.add(velocity);
+}
+
 function createScene() {
 	"use strict";
 
@@ -171,6 +203,25 @@ function update() {
 	if (keys[81] == 1) {
 		console.log("Q");
 	}
+
+    if (keys[37] == 1) {
+		console.log("L-Arrow");
+		moveOvniZ(true);
+	}
+	if (keys[39] == 1) {
+		console.log("R-Arrow");
+		moveOvniZ(false);
+	}
+	if (keys[38] == 1) {
+		console.log("U-Arrow");
+		moveOvniX(false);
+	}
+	if (keys[40] == 1) {
+		console.log("D-Arrow");
+		moveOvniX(true);
+	}
+
+    rotateOvni();
 }
 
 function animate() {
