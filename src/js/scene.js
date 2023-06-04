@@ -4,7 +4,7 @@ var cameras = [],
 	clock;
 
 var currentCameraIndex = 0,
-	cameraFrustum = 70,
+	cameraFrustum = 30,
 	delta = 0;
 
 var keys = {};
@@ -41,29 +41,34 @@ var tree;
 function createOvni(x, y, z) {
 	"use strict";
 
-	var body, cockpit, spotlight, light1, light2, light3, light4, light5, light6, light7, light8;
+	var body, outerRing, cockpit, spotlight, light1, light2, light3, light4, light5, light6, light7, light8;
 
 	// body
 	geometry = new THREE.SphereGeometry(15, 32, 32);
-	geometry.scale(1, 0.2, 1);
+	geometry.scale(1, 0.18, 1);
 	body = new THREE.Mesh(geometry, materials.get("gray"));
 	body.position.set(0, 0, 0);
 
+	// outerRing
+	// geometry = new THREE.CylinderGeometry(15.05, 15.05, 0.2, 32, 1, true);
+	// outerRing = new THREE.Mesh(geometry, materials.get("darkGray"));
+	// outerRing.position.set(0, 0, 0);
+
 	// cockpit
-	geometry = new THREE.SphereGeometry(4, 32, 32);
+	geometry = new THREE.SphereGeometry(5, 18, 18, 0, Math.PI * 2, 0, Math.PI / 2);
 	cockpit = new THREE.Mesh(geometry, materials.get("lightGray"));
-	cockpit.position.set(0, 3, 0);
+	cockpit.position.set(0, 2, 0);
 
 	// spotlight
-	geometry = new THREE.CylinderGeometry(7, 7, 1, 32);
+	geometry = new THREE.CylinderGeometry(7, 6, 1, 32);
 	spotlight = new THREE.Mesh(geometry, materials.get("yellow"));
-	spotlight.position.set(0, 0, 0);
+	spotlight.position.set(0, -2.6, 0);
 
 	var sLight = new THREE.SpotLight( 0xffffff );
 	sLight.castShadow = true;
 
 	// 8 lights around the cockpit
-	geometry = new THREE.CylinderGeometry(0.5, 0.5, 0.5, 32);
+	geometry = new THREE.SphereGeometry(0.5, 14, 5, 0, Math.PI * 2, 0, Math.PI / 2);
 	light1 = new THREE.Mesh(geometry, materials.get("yellow"));
 	light2 = new THREE.Mesh(geometry, materials.get("yellow"));
 	light3 = new THREE.Mesh(geometry, materials.get("yellow"));
@@ -75,15 +80,16 @@ function createOvni(x, y, z) {
 
 	// full ovni
 	ovni = new THREE.Object3D();
-	ovni.add(body, cockpit, spotlight, light1, light2, light3, light4, light5, light6, light7, light8);
+	ovni.add(body, cockpit, outerRing, spotlight, light1, light2, light3, light4, light5, light6, light7, light8);
 
 	// position the lights
 	for(var i = 0; i < 8; i++) {
 		var angle = i * Math.PI / 4;
-		var x = 11 * Math.cos(angle);
-		var z = 11 * Math.sin(angle);
-		ovni.children[i + 3].position.set(x, 0, z);
-		var light = new THREE.PointLight( 0xff0000, 1);
+		var xx = 11 * Math.cos(angle);
+		var zz = 11 * Math.sin(angle);
+		ovni.children[i + 3].position.set(xx, -1.6, zz);
+		ovni.children[i + 3].rotation.x = Math.PI;
+		var light = new THREE.PointLight(0xff0000, 1);
 		light.position.set( 50, 50, 50 );
 	}
 
@@ -204,8 +210,8 @@ function createScene() {
 	scene = new THREE.Scene();
 	scene.background = new THREE.Color("rgb(230, 230, 230)");
 
-	createOvni(0, 40, 0);
-	createTree(0, 0, 0);
+	createOvni(0, 10, 0);
+	createTree(0, -25, 0);
 }
 
 function createOrthographicCamera(x, y, z) {
@@ -242,6 +248,7 @@ function createCameras() {
 	var frontCamera = createOrthographicCamera(100, 0, 0);
 	var sideCamera = createOrthographicCamera(0, 0, 100);
 	var topCamera = createOrthographicCamera(0, 100, 0);
+	var botCamera = createOrthographicCamera(0, -100, 0);
 	var orthographicCamera = createOrthographicCamera(50, 50, 50);
 	var prespectiveCamera = createPerspectiveCamera(50, 50, 50);
 
@@ -249,6 +256,7 @@ function createCameras() {
 		frontCamera,
 		sideCamera,
 		topCamera,
+		botCamera,
 		orthographicCamera,
 		prespectiveCamera
 	);
@@ -266,13 +274,13 @@ function onResize() {
 function onKeyDown(e) {
 	"use strict";
 	// Handle cameras
-	if (e.keyCode >= 49 && e.keyCode <= 53) {
-		// 1-5
+	if (e.keyCode >= 49 && e.keyCode <= 54) {
+		// 1-6
 		currentCameraIndex = e.keyCode - 49;
 	}
 	// Toggle wireframe
-	else if (e.keyCode == 54) {
-		// 6
+	else if (e.keyCode == 55) {
+		// 7
 		for (let material of materials.values()) {
 			material.wireframe = !material.wireframe;
 		}
