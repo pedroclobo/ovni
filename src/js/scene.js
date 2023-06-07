@@ -4,36 +4,43 @@ var cameras = [],
 	clock;
 
 var currentCameraIndex = 0,
-	cameraFrustum = 30,
+	cameraFrustum = 40,
 	delta = 0;
 
 var keys = {};
 
 var materials = new Map([
-	["yellow", new THREE.MeshBasicMaterial({ color: 0xffd91c, wireframe: true })],
-	["orange", new THREE.MeshBasicMaterial({ color: 0xffa010, wireframe: true })],
-	["darkOrange", new THREE.MeshBasicMaterial({ color: 0xff4000, wireframe: true }),],
-	["red", new THREE.MeshBasicMaterial({ color: 0xc21d11, wireframe: true })],
-	["darkRed", new THREE.MeshBasicMaterial({ color: 0x9e0000, wireframe: true })],
-	["peru", new THREE.MeshBasicMaterial({ color: 0xcd853f, wireframe: true })],
-	["darkPeru", new THREE.MeshBasicMaterial({ color: 0xb8793f, wireframe: true })],
-	["saddleBrown", new THREE.MeshBasicMaterial({ color: 0x8B4513, wireframe: true })],
-	["darkOliveGreen", new THREE.MeshBasicMaterial({ color: 0x556B2F, wireframe: true })],
-	["oliveDrab", new THREE.MeshBasicMaterial({ color: 0x6B8E23, wireframe: true })],
-	["olive", new THREE.MeshBasicMaterial({ color: 0x465701, wireframe: true })],
-	["darkOlive", new THREE.MeshBasicMaterial({ color: 0x2c4a00, wireframe: true })],
-	["darkGreen", new THREE.MeshBasicMaterial({ color: 0x154000, wireframe: true })],
-	["blue", new THREE.MeshBasicMaterial({ color: 0x2260b3, wireframe: true }),],
-	["lightBlue", new THREE.MeshBasicMaterial({ color: 0x58c3d1, wireframe: true }),],
-	["gray", new THREE.MeshBasicMaterial({ color: 0x7a7a7a, wireframe: true })],
-	["lightGray", new THREE.MeshBasicMaterial({ color: 0xacacac, wireframe: true }),],
-	["darkGray", new THREE.MeshBasicMaterial({ color: 0x242424, wireframe: true }),]
+	["yellow", new THREE.MeshPhongMaterial({ color: 0xffd91c, wireframe: false })],
+	["orange", new THREE.MeshPhongMaterial({ color: 0xffa010, wireframe: false })],
+	["darkOrange", new THREE.MeshPhongMaterial({ color: 0xff4000, wireframe: false }),],
+	["red", new THREE.MeshPhongMaterial({ color: 0xc21d11, wireframe: false })],
+	["darkRed", new THREE.MeshPhongMaterial({ color: 0x9e0000, wireframe: false })],
+	["green", new THREE.MeshPhongMaterial({ color: 0x00ff00, wireframe: false })],
+	["peru", new THREE.MeshPhongMaterial({ color: 0xcd853f, wireframe: false })],
+	["darkPeru", new THREE.MeshPhongMaterial({ color: 0xb8793f, wireframe: false })],
+	["saddleBrown", new THREE.MeshPhongMaterial({ color: 0x8B4513, wireframe: false })],
+	["darkOliveGreen", new THREE.MeshPhongMaterial({ color: 0x556B2F, wireframe: false })],
+	["oliveDrab", new THREE.MeshPhongMaterial({ color: 0x6B8E23, wireframe: false })],
+	["olive", new THREE.MeshPhongMaterial({ color: 0x465701, wireframe: false })],
+	["darkOlive", new THREE.MeshPhongMaterial({ color: 0x2c4a00, wireframe: false })],
+	["darkGreen", new THREE.MeshPhongMaterial({ color: 0x154000, wireframe: false })],
+	["blue", new THREE.MeshPhongMaterial({ color: 0x2260b3, wireframe: false }),],
+	["lightBlue", new THREE.MeshPhongMaterial({ color: 0x58c3d1, wireframe: false }),],
+	["gray", new THREE.MeshPhongMaterial({ color: 0x7a7a7a, wireframe: false })],
+	["lightGray", new THREE.MeshPhongMaterial({ color: 0xacacac, wireframe: false }),],
+	["darkGray", new THREE.MeshPhongMaterial({ color: 0x242424, wireframe: false }),]
 ]);
 
-var geometry, line;
+var geometry, 
+	line;
 
-var ovni;
-var tree;
+var ovni, 
+	tree;
+
+var sLight,
+	pLights = [];
+
+var shadowsFlag = true;
 
 //-----------------------------------------------------//
 
@@ -41,7 +48,9 @@ var tree;
 function createOvni(x, y, z) {
 	"use strict";
 
-	var body, outerRing, cockpit, spotlight, light1, light2, light3, light4, light5, light6, light7, light8;
+	var body, cockpit, spotlight, light1, light2, light3, light4, light5, light6, light7, light8;
+	var sLightColor = 0x00ff00;
+	var pLightColor = 0xffff00;
 
 	// body
 	geometry = new THREE.SphereGeometry(15, 32, 32);
@@ -49,14 +58,9 @@ function createOvni(x, y, z) {
 	body = new THREE.Mesh(geometry, materials.get("gray"));
 	body.position.set(0, 0, 0);
 
-	// outerRing
-	// geometry = new THREE.CylinderGeometry(15.05, 15.05, 0.2, 32, 1, true);
-	// outerRing = new THREE.Mesh(geometry, materials.get("darkGray"));
-	// outerRing.position.set(0, 0, 0);
-
 	// cockpit
 	geometry = new THREE.SphereGeometry(5, 18, 18, 0, Math.PI * 2, 0, Math.PI / 2);
-	cockpit = new THREE.Mesh(geometry, materials.get("lightGray"));
+	cockpit = new THREE.Mesh(geometry, materials.get("lightBlue"));
 	cockpit.position.set(0, 2, 0);
 
 	// spotlight
@@ -64,7 +68,10 @@ function createOvni(x, y, z) {
 	spotlight = new THREE.Mesh(geometry, materials.get("yellow"));
 	spotlight.position.set(0, -2.6, 0);
 
-	var sLight = new THREE.SpotLight( 0xffffff );
+	// SpotLight( color : Integer, intensity : Float, distance : Float, angle : Radians, penumbra : Float, decay : Float ) 
+	sLight = new THREE.SpotLight(sLightColor, 3, 0, Math.PI / 6, 0.2, 0.5);
+	sLight.position.set(0, 0, 0);
+	sLight.target.position.set(0, -30, 0);
 	sLight.castShadow = true;
 
 	// 8 lights around the cockpit
@@ -80,7 +87,7 @@ function createOvni(x, y, z) {
 
 	// full ovni
 	ovni = new THREE.Object3D();
-	ovni.add(body, cockpit, outerRing, spotlight, light1, light2, light3, light4, light5, light6, light7, light8);
+	ovni.add(body, cockpit, spotlight, light1, light2, light3, light4, light5, light6, light7, light8, sLight, sLight.target);
 
 	// position the lights
 	for(var i = 0; i < 8; i++) {
@@ -89,8 +96,11 @@ function createOvni(x, y, z) {
 		var zz = 11 * Math.sin(angle);
 		ovni.children[i + 3].position.set(xx, -1.6, zz);
 		ovni.children[i + 3].rotation.x = Math.PI;
-		var light = new THREE.PointLight(0xff0000, 1);
-		light.position.set( 50, 50, 50 );
+		// PointLight( color : Integer, intensity : Float, distance : Number, decay : Float )
+		pLights[i] = new THREE.PointLight(pLightColor, 1, 8, 0.25);
+		pLights[i].position.set( xx - 0.1, -2.5, zz - 0.1 );
+		pLights[i].castShadow = false;
+		ovni.add(pLights[i]);
 	}
 
 	ovni.position.set(x, y, z);
@@ -130,6 +140,11 @@ function moveOvniZ(left) {
 	ovni.position.add(velocity);
 }
 
+function makeShadow(mesh) {
+	mesh.receiveShadow = shadowsFlag;
+	mesh.castShadow = shadowsFlag;
+}
+
 function createTree(x, y, z) {
 	"use strict";
 
@@ -139,6 +154,7 @@ function createTree(x, y, z) {
 	geometry = new THREE.CylinderGeometry(1.1, 1.5, 8, 16);
 	trunk = new THREE.Mesh(geometry, materials.get("peru"));
 	trunk.position.set(0, 4, 0); // base on the ground
+	makeShadow(trunk);
 
 	// branch 1
 	geometry = new THREE.CylinderGeometry(0.7, 1, 6, 16);
@@ -146,6 +162,7 @@ function createTree(x, y, z) {
 	branch1.rotation.x = THREE.MathUtils.degToRad(-20);
 	branch1.rotation.z = THREE.MathUtils.degToRad(10);
 	branch1.position.set(-0.7, 10, -1.2);
+	makeShadow(branch1);
 
 	// topBranch 1
 	geometry = new THREE.CylinderGeometry(0.9, 1, 3, 16);
@@ -153,6 +170,7 @@ function createTree(x, y, z) {
 	topBranch1.rotation.x = THREE.MathUtils.degToRad(-20);
 	topBranch1.rotation.z = THREE.MathUtils.degToRad(10);
 	topBranch1.position.set(-0.8, 10.5, -1.4);
+	makeShadow(topBranch1);
 
 	// branch 2
 	geometry = new THREE.CylinderGeometry(0.4, 0.8, 10, 16);
@@ -160,6 +178,7 @@ function createTree(x, y, z) {
 	branch2.rotation.x = THREE.MathUtils.degToRad(40);
 	branch2.rotation.z = THREE.MathUtils.degToRad(-10);
 	branch2.position.set(1, 11, 3.4);
+	makeShadow(branch2);
 
 	// topBranch 2
 	geometry = new THREE.CylinderGeometry(0.6, 0.8, 8, 16);
@@ -167,6 +186,7 @@ function createTree(x, y, z) {
 	topBranch2.rotation.x = THREE.MathUtils.degToRad(40);
 	topBranch2.rotation.z = THREE.MathUtils.degToRad(-10);
 	topBranch2.position.set(1.2, 12, 4.2);
+	makeShadow(topBranch2);
 
 	// branch 3
 	geometry = new THREE.CylinderGeometry(0.5, 0.5, 3.5, 16);
@@ -174,6 +194,7 @@ function createTree(x, y, z) {
 	branch3.rotation.x = THREE.MathUtils.degToRad(-40);
 	branch3.rotation.z = THREE.MathUtils.degToRad(-25);
 	branch3.position.set(2, 12.1, 1.7);
+	makeShadow(branch3);
 
 	// foliage 1
 	geometry = new THREE.SphereGeometry(6, 16, 16);
@@ -181,6 +202,7 @@ function createTree(x, y, z) {
 	foliage1 = new THREE.Mesh(geometry, materials.get("darkOlive"));
 	foliage1.rotation.x = THREE.MathUtils.degToRad(3);
 	foliage1.position.set(-1.5, 14, -4);
+	makeShadow(foliage1);
 
 	// foliage 2
 	geometry = new THREE.SphereGeometry(7, 16, 16);
@@ -188,12 +210,14 @@ function createTree(x, y, z) {
 	foliage2 = new THREE.Mesh(geometry, materials.get("darkGreen"));
 	foliage2.rotation.z = THREE.MathUtils.degToRad(5);
 	foliage2.position.set(1, 15.5, 7);
+	makeShadow(foliage2);
 
 	// foliage 3
 	geometry = new THREE.SphereGeometry(4, 16, 16);
 	geometry.scale(1, 0.6, 1);
 	foliage3 = new THREE.Mesh(geometry, materials.get("olive"));
 	foliage3.position.set(4, 15, 0);
+	makeShadow(foliage3);
 
 	// full tree
 	tree = new THREE.Object3D();
@@ -204,14 +228,29 @@ function createTree(x, y, z) {
 	scene.add(tree);
 }
 
+function createPlane(x, y, z) {
+	geometry = new THREE.PlaneBufferGeometry(200, 200, 8, 8);
+	var material = new THREE.MeshPhongMaterial({color: 0x00ff00});
+	var plane = new THREE.Mesh(geometry, material);
+	plane.rotateX(-Math.PI / 2);
+	plane.position.set(x, y, z);
+	plane.receiveShadow = true;
+
+	scene.add(plane);
+}
+
 function createScene() {
 	"use strict";
 
 	scene = new THREE.Scene();
-	scene.background = new THREE.Color("rgb(230, 230, 230)");
+	scene.background = new THREE.Color("rgb(20, 20, 20)");
 
+	createPlane(0, -25, 0);
 	createOvni(0, 10, 0);
 	createTree(0, -25, 0);
+
+	var ambientLight = new THREE.AmbientLight(0xeeffa8, 0.2);
+	scene.add(ambientLight);
 }
 
 function createOrthographicCamera(x, y, z) {
@@ -246,6 +285,7 @@ function createPerspectiveCamera(x, y, z) {
 function createCameras() {
 	"use strict";
 	var frontCamera = createOrthographicCamera(100, 0, 0);
+	var backCamera = createOrthographicCamera(-100, 0, 0);
 	var sideCamera = createOrthographicCamera(0, 0, 100);
 	var topCamera = createOrthographicCamera(0, 100, 0);
 	var botCamera = createOrthographicCamera(0, -100, 0);
@@ -254,6 +294,7 @@ function createCameras() {
 
 	cameras.push(
 		frontCamera,
+		backCamera,
 		sideCamera,
 		topCamera,
 		botCamera,
@@ -274,17 +315,30 @@ function onResize() {
 function onKeyDown(e) {
 	"use strict";
 	// Handle cameras
-	if (e.keyCode >= 49 && e.keyCode <= 54) {
-		// 1-6
+	if (e.keyCode >= 49 && e.keyCode <= 55) {
+		console.log("1-7 : Cameras");
 		currentCameraIndex = e.keyCode - 49;
 	}
 	// Toggle wireframe
-	else if (e.keyCode == 55) {
-		// 7
+	else if (e.keyCode == 56) {
+		console.log("8 : Wireframe");
 		for (let material of materials.values()) {
 			material.wireframe = !material.wireframe;
 		}
-	} else keys[e.keyCode] = 1;
+	}
+	// Toggle spotLight
+	else if (e.keyCode == 83) {
+		console.log("s/S : SpotLight");
+		sLight.visible = !sLight.visible;
+	}
+	// Toggle pointLights
+	else if (e.keyCode == 80) {
+		console.log("p/P : PointLights");
+		for(var i = 0; i < 8; i++) {
+			pLights[i].visible = !pLights[i].visible;
+		}
+	}
+	else keys[e.keyCode] = 1;
 }
 
 function onKeyUp(e) {
@@ -301,6 +355,7 @@ function init() {
 	"use strict";
 	renderer = new THREE.WebGLRenderer({ antialias: true });
 	renderer.setSize(window.innerWidth, window.innerHeight);
+	renderer.shadowMap.enabled = true;
 	document.body.appendChild(renderer.domElement);
 
 	createScene();
