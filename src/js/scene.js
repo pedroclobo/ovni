@@ -51,7 +51,8 @@ var spotLight,
 	pointLights = [],
 	directionalLight;
 
-var shadowsFlag = true;
+var shadowsFlag = true,
+	debug = false;
 
 //-----------------------------------------------------//
 
@@ -60,7 +61,7 @@ function createOvni(x, y, z) {
 	"use strict";
 
 	var body, cockpit, spotlight, light1, light2, light3, light4, light5, light6;
-	var sLightColor = 0x00ff00;
+	var sLightColor = 0xffff00;
 	var pLightColor = 0xffff00;
 
 	// body
@@ -80,7 +81,7 @@ function createOvni(x, y, z) {
 	spotlight.position.set(0, -2.6, 0);
 
 	// SpotLight(color: Integer, intensity: Float, distance: Float, angle: Radians, penumbra: Float, decay: Float)
-	spotLight = new THREE.SpotLight(sLightColor, 3, 0, Math.PI / 6, 0.2, 0.5);
+	spotLight = new THREE.SpotLight(sLightColor, 2, 0, Math.PI / 6, 0.2, 0.5);
 	spotLight.position.set(0, 0, 0);
 	spotLight.target.position.set(0, -30, 0);
 	spotLight.castShadow = true;
@@ -154,7 +155,7 @@ function makeShadow(mesh) {
 	mesh.castShadow = shadowsFlag;
 }
 
-function createTree(x, y, z) {
+function createTree(x, y, z, h, deg) {
 	"use strict";
 
 	var trunk, branch1, topBranch1, branch2, topBranch2, branch3, foliage1, foliage2, foliage3;
@@ -233,22 +234,19 @@ function createTree(x, y, z) {
 	tree.add(trunk, branch1, topBranch1, branch2, topBranch2, branch3, foliage1, foliage2, foliage3);
 
 	tree.position.set(x, y, z);
+	tree.rotation.y = THREE.MathUtils.degToRad(deg);
+	tree.scale.set(1, h, 1);
 
 	meshes.push(trunk, branch1, topBranch1, branch2, topBranch2, branch3, foliage1, foliage2, foliage3);
 	scene.add(tree);
 }
 
-function createField(x, y, z) {
+function createTrees() {
 	"use strict";
-	// field
-	geometry = new THREE.PlaneBufferGeometry(200, 200, 8, 8);
-	fieldMaterial = new THREE.MeshPhongMaterial({color: 0x29870c});
-	fieldMesh = new THREE.Mesh(geometry, fieldMaterial);
-	fieldMesh.rotateX(-Math.PI / 2);
-	fieldMesh.position.set(x, y, z);
-	fieldMesh.receiveShadow = true;
-
-	scene.add(fieldMesh);
+	createTree(0, 0, 50, 1, 0);
+	createTree(-60, 0, -40, 0.9, 70);
+	createTree(-50, 0, 20, 0.9, 30);
+	createTree(30, 0, -60, 1.2, -45);
 }
 
 function createSkydome(x, y, z) {
@@ -269,9 +267,8 @@ function createMoon(x, y, z) {
 	geometry = new THREE.SphereGeometry(10, 32, 32);
 	var moonMesh = new THREE.Mesh(geometry, materials.get("yellowEmissive"));
 
-	directionalLight = new THREE.DirectionalLight(0xf6dc79, 0.15);
+	directionalLight = new THREE.DirectionalLight(0xf6dc79, 0.3);
 	directionalLight.position.set(0, -8, 8);
-	directionalLight.castShadow = true;
 
 	moon.add(moonMesh, directionalLight);
 	moon.position.set(x, y, z);
@@ -323,6 +320,7 @@ function addWindow( obj, x, y, z, size ) {
 
 	var mesh = new THREE.Mesh(geometry, materials.get("blue"));
 	mesh.position.set(x, y, z);
+	makeShadow(mesh);
 
 	obj.add(mesh);
 	meshes.push(mesh);
@@ -355,7 +353,11 @@ function addWalls(obj, size) {
 	geometry.setIndex(indices);
 	geometry.computeVertexNormals();
 
-	obj.add(new THREE.Mesh(geometry, materials.get("white")));
+	var mesh = new THREE.Mesh(geometry, materials.get("white"));
+	makeShadow(mesh);
+
+	obj.add(mesh);
+	meshes.push(mesh);
 }
 
 function addRoof(obj, size) {
@@ -382,7 +384,11 @@ function addRoof(obj, size) {
 	geometry.setIndex(indices);
 	geometry.computeVertexNormals();
 
-	obj.add(new THREE.Mesh(geometry, materials.get("orange")));
+	var mesh = new THREE.Mesh(geometry, materials.get("orange"));
+	makeShadow(mesh);
+
+	obj.add(mesh);
+	meshes.push(mesh);
 }
 
 function createHouse(x, y, z) {
@@ -401,20 +407,73 @@ function createHouse(x, y, z) {
 	scene.add(house);
 }
 
+function createGround(x, y, z) {
+	'use strict';
+
+	function getPixelDataFromImage(image) {
+		var canvas = document.createElement('canvas');
+		canvas.height = 1081;
+		canvas.width = 1081;
+		var context = canvas.getContext('2d');    
+		context.width  = image.width;
+		context.height = image.height;
+
+		context.drawImage(image, 0, 0, image.width, image.height, 0, 0, context.width, context.height);
+		return context.getImageData(0, 0, image.width, image.height).data;
+	}
+
+	var loader = new THREE.TextureLoader();
+	loader.load('resources/heightmap.png', function(texture) {
+		var width = 500; // Width of the terrain
+		var height = 500; // Height of the terrain
+		var segmentsX = 100; // Number of segments in the x direction
+		var segmentsY = 100; // Number of segments in the y direction
+		var maxHeight = 80; // Maximum height of the terrain
+		var heightOffset = -21; // Height offset, moves the whole terrain up or down.
+
+		var geometry = new THREE.PlaneGeometry(width, height, segmentsX, segmentsY);
+
+		var data = getPixelDataFromImage(texture.image);
+		var vertices = geometry.getAttribute('position');
+		var uv = geometry.getAttribute('uv');
+		var textureWidth = texture.image.width;
+		var textureHeight = texture.image.height;
+		const floatsPerPixel = 4; // RGBA = 4, one float per component
+
+		for (var i = 0; i < vertices.count; i++) {
+			var u = uv.array[i * 2];
+			var v = uv.array[i * 2 + 1];
+			let col = Math.min(Math.floor(textureWidth * u), textureWidth-1) * floatsPerPixel;
+			let row = Math.min(Math.floor(textureHeight * v), textureHeight-1) * floatsPerPixel;
+			var k = row * textureWidth + col + 1; // +1 to read the green component. Could be 0 for red, 2 for blue, or 3 for alpha
+			var z = data[k] / 255.0 *  maxHeight + heightOffset;
+			vertices.array[i * 3 + 2] = z; // +2 because we are changing the Z component of the vertex. Remember the plane starts sideways, not flat
+		}
+
+		fieldMaterial = new THREE.MeshPhongMaterial({ color: 0x009900, map: texture, wireframe: false });
+		fieldMesh = new THREE.Mesh(geometry, fieldMaterial);
+		fieldMesh.rotation.x = Math.PI * -0.5;
+		fieldMesh.position.set(x, y, z);
+		fieldMesh.receiveShadow = true;
+
+		scene.add(fieldMesh);
+	});
+}
+
 function createScene() {
 	"use strict";
 
 	scene = new THREE.Scene();
 	scene.background = new THREE.Color("rgb(20, 20, 20)");
 
-	createSkydome(0, 0, 0);
-	createField(0, -25, 0);
-	createOvni(0, 10, 20);
-	createTree(0, -25, 20);
-	createHouse(0, -25, 0);
-	createMoon(0, 30, 40);
+	createSkydome(0, -5, 0);
+	createGround(0, 0.5, 0);
+	createOvni(0, 50, 20);
+	createTrees();
+	createHouse(0, 0, 0);
+	createMoon(0, 50, 80);
 	
-	var ambientLight = new THREE.AmbientLight(0xf6dc79, 0.5);
+	var ambientLight = new THREE.AmbientLight(0xf6dc79, 0.2);
 	scene.add(ambientLight);
 }
 
@@ -457,8 +516,10 @@ function createCameras() {
 	var botCamera = createOrthographicCamera(0, -100, 0);
 	var orthographicCamera = createOrthographicCamera(50, 50, 50);
 	var prespectiveCamera = createPerspectiveCamera(50, 50, 50);
+	var mainCamera = createPerspectiveCamera(120, 50, 50);
 
 	cameras.push(
+		mainCamera,
 		frontCamera,
 		backCamera,
 		sideCamera,
@@ -515,7 +576,7 @@ function generateFieldTexture(size) {
 	var context = canvas.getContext('2d');
 
 	// Define the field colors
-	var fieldColor = '#1a6b01';
+	var fieldColor = '#003b00';
 	var flowerColors = ['#ffffff', '#ffff00', '#a835c4', '#0092d1'];
 	var flowerCount = 75;
 
@@ -552,7 +613,7 @@ function onResize() {
 function onKeyDown(e) {
 	"use strict";
 	// Handle cameras
-	if (e.keyCode >= 97 && e.keyCode <= 104) {
+	if (e.keyCode >= 97 && e.keyCode <= 105 && debug) {
 		console.log("1-7 : Cameras");
 		currentCameraIndex = e.keyCode - 97;
 	}
@@ -591,7 +652,7 @@ function onKeyDown(e) {
 			var emissiveT =  meshes[i].material.emissive;
 			meshes[i].material = new THREE.MeshBasicMaterial({color: colorT, emissive: emissiveT});
 		}
-		fieldMaterial = new THREE.MeshBasicMaterial({color: 0x29870c});
+		fieldMaterial = new THREE.MeshBasicMaterial({color: 0x009900});
 		fieldMesh.material = fieldMaterial;
 	}
 	// Toggle wireframe
@@ -642,12 +703,6 @@ function onKeyDown(e) {
 
 		fieldMaterial = new THREE.MeshPhongMaterial({ map: fieldTexture });
 		fieldMesh.material = fieldMaterial;
-
-		// terrainCutout = new TerrainCutout(60, 1, 60, 300, 300, displacement, texture);
-	
-		// terrainCutout.material.displacementScale = 10;
-		// terrainCutout.position.set(0, -6, 2);
-		// scene.add(terrainCutout);
 	}
 	else keys[e.keyCode] = 1;
 }
