@@ -36,7 +36,8 @@ var geometry,
 	meshes = [];
 
 var ovni,
-	tree;
+	tree,
+	moon;
 
 var skydomeMesh,
 	skydomeMaterial;
@@ -44,8 +45,9 @@ var skydomeMesh,
 var fieldMesh,
 	fieldMaterial;
 
-var sLight,
-	pLights = [];
+var spotLight,
+	pointLights = [],
+	directionalLight;
 
 var shadowsFlag = true;
 
@@ -76,10 +78,10 @@ function createOvni(x, y, z) {
 	spotlight.position.set(0, -2.6, 0);
 
 	// SpotLight(color: Integer, intensity: Float, distance: Float, angle: Radians, penumbra: Float, decay: Float)
-	sLight = new THREE.SpotLight(sLightColor, 3, 0, Math.PI / 6, 0.2, 0.5);
-	sLight.position.set(0, 0, 0);
-	sLight.target.position.set(0, -30, 0);
-	sLight.castShadow = true;
+	spotLight = new THREE.SpotLight(sLightColor, 3, 0, Math.PI / 6, 0.2, 0.5);
+	spotLight.position.set(0, 0, 0);
+	spotLight.target.position.set(0, -30, 0);
+	spotLight.castShadow = true;
 
 	// 8 lights around the cockpit
 	geometry = new THREE.SphereGeometry(0.5, 14, 5, 0, Math.PI * 2, 0, Math.PI / 2);
@@ -92,7 +94,7 @@ function createOvni(x, y, z) {
 
 	// full ovni
 	ovni = new THREE.Object3D();
-	ovni.add(body, cockpit, spotlight, light1, light2, light3, light4, light5, light6, sLight, sLight.target);
+	ovni.add(body, cockpit, spotlight, light1, light2, light3, light4, light5, light6, spotLight, spotLight.target);
 
 	// position the lights
 	for(var i = 0; i < 6; i++) {
@@ -102,10 +104,9 @@ function createOvni(x, y, z) {
 		ovni.children[i + 3].position.set(xx, -1.8, zz);
 		ovni.children[i + 3].rotation.x = Math.PI;
 		// PointLight(color: Integer, intensity: Float, distance: Number, decay: Float)
-		pLights[i] = new THREE.PointLight(pLightColor, 1, 8, 0.25);
-		pLights[i].position.set( xx - 0.1, -2.5, zz - 0.1 );
-		pLights[i].castShadow = false;
-		ovni.add(pLights[i]);
+		pointLights[i] = new THREE.PointLight(pLightColor, 1, 8, 0.25);
+		pointLights[i].position.set( xx - 0.1, -2.5, zz - 0.1 );
+		ovni.add(pointLights[i]);
 	}
 
 	ovni.position.set(x, y, z);
@@ -258,6 +259,24 @@ function createSkydome(x, y, z) {
 	scene.add(skydomeMesh);
 }
 
+function createMoon(x, y, z) {
+	"use strict";
+	// moon
+	moon = new THREE.Object3D();
+
+	geometry = new THREE.SphereGeometry(10, 32, 32);
+	var moonMesh = new THREE.Mesh(geometry, materials.get("yellowEmissive"));
+
+	directionalLight = new THREE.DirectionalLight(0xf6dc79, 0.15);
+	directionalLight.position.set(0, -8, 8);
+	directionalLight.castShadow = true;
+
+	moon.add(moonMesh, directionalLight);
+	moon.position.set(x, y, z);
+
+	scene.add(moon);
+}
+
 function createScene() {
 	"use strict";
 
@@ -268,8 +287,9 @@ function createScene() {
 	createField(0, -25, 0);
 	createOvni(0, 10, 0);
 	createTree(0, -25, 0);
-
-	var ambientLight = new THREE.AmbientLight(0xf6dc79, 0.2);
+	createMoon(0, 30, 40);
+	
+	var ambientLight = new THREE.AmbientLight(0xf6dc79, 0.08);
 	scene.add(ambientLight);
 }
 
@@ -364,7 +384,7 @@ function generateFieldTexture(size) {
 	var canvas = document.createElement('canvas');
 	canvas.width = size;
 	canvas.height = size;
-	
+
 	var context = canvas.getContext('2d');
 
 	// Define the field colors
@@ -454,16 +474,21 @@ function onKeyDown(e) {
 			material.wireframe = !material.wireframe;
 		}
 	}
+	// Toggle directionalLight
+	else if (e.keyCode == 68) {
+		console.log("s/S : DirectionalLight");
+		directionalLight.visible = !directionalLight.visible;
+	}
 	// Toggle spotLight
 	else if (e.keyCode == 83) {
 		console.log("s/S : SpotLight");
-		sLight.visible = !sLight.visible;
+		spotLight.visible = !spotLight.visible;
 	}
 	// Toggle pointLights
 	else if (e.keyCode == 80) {
 		console.log("p/P : PointLights");
 		for(var i = 0; i < 6; i++) {
-			pLights[i].visible = !pLights[i].visible;
+			pointLights[i].visible = !pointLights[i].visible;
 		}
 	}
 	// Skydome Texture
@@ -515,7 +540,7 @@ function init() {
 	renderer = new THREE.WebGLRenderer({ antialias: true });
 	renderer.setSize(window.innerWidth, window.innerHeight);
 	renderer.shadowMap.enabled = true;
-	renderer.shadowMap.type = THREE.PCFSoftShadowMap; //THREE.BasicShadowMap for better performance
+	renderer.shadowMap.type = THREE.BasicShadowMap; //THREE.PCFSoftShadowMap for better quality
 	document.body.appendChild(renderer.domElement);
 
 	createScene();
@@ -527,6 +552,8 @@ function init() {
 	window.addEventListener("keydown", onKeyDown);
 	window.addEventListener("keyup", onKeyUp);
 	window.addEventListener("resize", onResize, false);
+
+	renderer.setAnimationLoop(animate);
 }
 
 function update() {
@@ -562,5 +589,5 @@ function animate() {
 	delta = clock.getDelta();
 	update();
 	render();
-	requestAnimationFrame(animate);
+	// requestAnimationFrame(animate);
 }
