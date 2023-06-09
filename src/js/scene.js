@@ -4,12 +4,13 @@ var cameras = [],
 	clock;
 
 var currentCameraIndex = 0,
-	cameraFrustum = 40,
+	cameraFrustum = 50,
 	delta = 0;
 
 var keys = {};
 
 var materials = new Map([
+	["white", new THREE.MeshLambertMaterial({ color: 0xffffff})],
 	["yellowEmissive", new THREE.MeshLambertMaterial({ color: 0xffd91c, emissive: 0xffd91c })],
 	["orange", new THREE.MeshPhongMaterial({ color: 0xffa010 })],
 	["darkOrange", new THREE.MeshPhongMaterial({ color: 0xff4000 })],
@@ -37,7 +38,8 @@ var geometry,
 
 var ovni,
 	tree,
-	moon;
+	moon,
+	house;
 
 var skydomeMesh,
 	skydomeMaterial;
@@ -252,7 +254,7 @@ function createField(x, y, z) {
 function createSkydome(x, y, z) {
 	"use strict";
 	// skydome
-	geometry = new THREE.SphereGeometry(150, 32, 32);
+	geometry = new THREE.SphereGeometry(180, 32, 32);
 	skydomeMesh = new THREE.Mesh(geometry, skydomeMaterial);
 	skydomeMesh.position.set(x, y, z);
 
@@ -277,6 +279,128 @@ function createMoon(x, y, z) {
 	scene.add(moon);
 }
 
+function addWindow( obj, x, y, z, size ) {
+	'use strict';
+
+	const vertices3 = new Float32Array([
+		// left window
+		-size*1.5+size*0.35,	size*0.65,	size+0.1,	// bot left - 0
+		-size*1.5+size*0.35,	size*1.35,	size+0.1,	// top left - 1
+		-size*1.5-size*0.35,	size*0.65,	size+0.1,	// bot left - 2
+		-size*1.5-size*0.35,	size*1.35,	size+0.1,	// top left - 3
+
+		// right window
+		size*1.5+size*0.35,	size*0.65,	size+0.1,	// bot right - 4
+		size*1.5+size*0.35,	size*1.35,	size+0.1,	// top right - 5
+		size*1.5-size*0.35,	size*0.65,	size+0.1,	// bot right - 6
+		size*1.5-size*0.35,	size*1.35,	size+0.1,	// top right - 7
+
+		// door
+		+size*0.5,	0,			size+0.1,	// bot left - 8
+		+size*0.5,	size*1.6,	size+0.1,	// top left - 9
+		-size*0.5,	0,			size+0.1,	// bot left - 10
+		-size*0.5,	size*1.6,	size+0.1,	// top left - 11
+	]);
+
+	const indices3 = [
+		// left window
+		0, 1, 3,
+		0, 3, 2,
+
+		// right window
+		4, 5, 7,
+		4, 7, 6,
+
+		// door
+		8, 9, 11,
+		8, 11, 10,
+	];
+
+	geometry = new THREE.BufferGeometry();
+	geometry.setAttribute('position', new THREE.BufferAttribute(vertices3, 3));
+	geometry.setIndex(indices3);
+	geometry.computeVertexNormals();
+
+	var mesh = new THREE.Mesh(geometry, materials.get("blue"));
+	mesh.position.set(x, y, z);
+
+	obj.add(mesh);
+	meshes.push(mesh);
+}
+
+function addWalls(obj, size) {
+	'use strict';
+
+	const vertices = new Float32Array([
+		// front wall
+		-size*2.5,	0,		size,	// bot left - 0
+		-size*2.5,	size*2,	size,	// top left - 1
+		size*2.5,	0,		size,	// bot right - 2
+		size*2.5,	size*2,	size,	// top right - 3
+		// side wall
+		size*2.5,	size*2,	-size,	// top right - 4
+		size*2.5,	0,		-size,	// bot right - 5
+		// roof wall
+		size*2.5,	size*2.5,	0,	// top right - 6
+	]);
+	const indices = [
+		0, 3, 1,
+		0, 2, 3,
+		2, 4, 3,
+		2, 5, 4,
+		6, 3, 4
+	];
+	geometry = new THREE.BufferGeometry();
+	geometry.setAttribute('position', new THREE.BufferAttribute( vertices, 3) );
+	geometry.setIndex(indices);
+	geometry.computeVertexNormals();
+
+	obj.add(new THREE.Mesh(geometry, materials.get("white")));
+}
+
+function addRoof(obj, size) {
+	'use strict';
+
+	const vertices = new Float32Array([
+		// front roof
+		-size*2.5,	size*2,		size,	// bot left - 0
+		-size*2.5,	size*2.5,	0,		// top left - 1
+		size*2.5,	size*2.5,	0,		// top right - 2
+		size*2.5,	size*2,		size,	// bot right - 3
+		// back roof
+		size*2.5,	size*2,	-size,	// bot right - 4
+		-size*2.5,	size*2,	-size,	// bot left - 5
+	]);
+	const indices = [
+		0, 2, 1,
+		0, 3, 2,
+		2, 4, 5,
+		1, 2, 5
+	];
+	geometry = new THREE.BufferGeometry();
+	geometry.setAttribute('position', new THREE.BufferAttribute( vertices, 3) );
+	geometry.setIndex(indices);
+	geometry.computeVertexNormals();
+
+	obj.add(new THREE.Mesh(geometry, materials.get("orange")));
+}
+
+function createHouse(x, y, z) {
+	'use strict';
+
+	var size = 5;
+	
+	house = new THREE.Object3D();
+	addWalls(house, size);
+	addRoof(house, size);
+	addWindow(house, 0, 0, 0, size);
+
+	house.rotation.y = THREE.MathUtils.degToRad(40);
+	house.position.set(x, y, z);
+
+	scene.add(house);
+}
+
 function createScene() {
 	"use strict";
 
@@ -285,11 +409,12 @@ function createScene() {
 
 	createSkydome(0, 0, 0);
 	createField(0, -25, 0);
-	createOvni(0, 10, 0);
-	createTree(0, -25, 0);
+	createOvni(0, 10, 20);
+	createTree(0, -25, 20);
+	createHouse(0, -25, 0);
 	createMoon(0, 30, 40);
 	
-	var ambientLight = new THREE.AmbientLight(0xf6dc79, 0.08);
+	var ambientLight = new THREE.AmbientLight(0xf6dc79, 0.5);
 	scene.add(ambientLight);
 }
 
@@ -327,6 +452,7 @@ function createCameras() {
 	var frontCamera = createOrthographicCamera(100, 0, 0);
 	var backCamera = createOrthographicCamera(-100, 0, 0);
 	var sideCamera = createOrthographicCamera(0, 0, 100);
+	var otherSideCamera = createOrthographicCamera(0, 0, -100);
 	var topCamera = createOrthographicCamera(0, 100, 0);
 	var botCamera = createOrthographicCamera(0, -100, 0);
 	var orthographicCamera = createOrthographicCamera(50, 50, 50);
@@ -336,6 +462,7 @@ function createCameras() {
 		frontCamera,
 		backCamera,
 		sideCamera,
+		otherSideCamera,
 		topCamera,
 		botCamera,
 		orthographicCamera,
@@ -344,38 +471,38 @@ function createCameras() {
 }
 
 function generateSkyTexture(size) {
-    'use strict';
+	'use strict';
 
-    var canvas = document.createElement('canvas');
-    canvas.width = size;
-    canvas.height = size;
-    var context = canvas.getContext('2d');
+	var canvas = document.createElement('canvas');
+	canvas.width = size;
+	canvas.height = size;
+	var context = canvas.getContext('2d');
 
-    // creating the background
-    var gradient = context.createLinearGradient(0, 0, 0, size);
-    gradient.addColorStop(0, '#00008B');
-    gradient.addColorStop(1, '#140026');
-    context.fillStyle = gradient;
-    context.fillRect(0, 0, size, size);
+	// creating the background
+	var gradient = context.createLinearGradient(0, 0, 0, size);
+	gradient.addColorStop(0, '#00008B');
+	gradient.addColorStop(1, '#140026');
+	context.fillStyle = gradient;
+	context.fillRect(0, 0, size, size);
 
-    // creating the stars
-    var starColor = '#ffffff';
-    var starRadius = 1;
-    var numStars = 250;
+	// creating the stars
+	var starColor = '#ffffff';
+	var starRadius = 1;
+	var numStars = 250;
 
-    for (var i = 0; i < numStars; i++) {
-        var x = Math.random() * size;
-        var y = Math.random() * size;
-        context.fillStyle = starColor;
-        context.beginPath();
-        context.arc(x, y, starRadius, 0, Math.PI * 2);
-        context.closePath();
-        context.fill();
-    }
+	for (var i = 0; i < numStars; i++) {
+		var x = Math.random() * size;
+		var y = Math.random() * size;
+		context.fillStyle = starColor;
+		context.beginPath();
+		context.arc(x, y, starRadius, 0, Math.PI * 2);
+		context.closePath();
+		context.fill();
+	}
 
-    // Generate data URL
-    var dataURL = canvas.toDataURL('sky.jpeg');
-    return dataURL;
+	// Generate data URL
+	var dataURL = canvas.toDataURL('sky.jpeg');
+	return dataURL;
 }
 
 function generateFieldTexture(size) {
@@ -409,8 +536,8 @@ function generateFieldTexture(size) {
 	}
 
 	// Generate data URL
-    var dataURL = canvas.toDataURL('field.jpeg');
-    return dataURL;
+	var dataURL = canvas.toDataURL('field.jpeg');
+	return dataURL;
 }
 
 function onResize() {
@@ -425,7 +552,7 @@ function onResize() {
 function onKeyDown(e) {
 	"use strict";
 	// Handle cameras
-	if (e.keyCode >= 97 && e.keyCode <= 103) {
+	if (e.keyCode >= 97 && e.keyCode <= 104) {
 		console.log("1-7 : Cameras");
 		currentCameraIndex = e.keyCode - 97;
 	}
@@ -517,7 +644,7 @@ function onKeyDown(e) {
 		fieldMesh.material = fieldMaterial;
 
 		// terrainCutout = new TerrainCutout(60, 1, 60, 300, 300, displacement, texture);
-    
+	
 		// terrainCutout.material.displacementScale = 10;
 		// terrainCutout.position.set(0, -6, 2);
 		// scene.add(terrainCutout);
